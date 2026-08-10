@@ -1,9 +1,19 @@
-#Joining everything
+#Whole dataset
 
 library(tidyverse)
 library(haven)
 library(psych)
 library(skimr)
+
+nhanes_project_2 <- demographics_clean |> 
+  full_join(pa_sitting_clean, by = "SEQN") |> 
+  full_join(depression_clean, by = "SEQN") |> 
+  full_join(diabetes_clean, by = "SEQN") |> 
+  full_join(smoking_clean, by = "SEQN") |> 
+  full_join(unemployment_clean, by = "SEQN") |> 
+  filter(!when_any()
+  
+         view(nhanes_project_2)
 
 dep_pa_raw <- full_join(pa_moderate_vigorous_met, dep_cat_score, by = "SEQN")
 

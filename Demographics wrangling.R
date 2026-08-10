@@ -8,7 +8,7 @@ demo_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DEMO_L.xpt")
 
 #Cleaning the data
 
-demo_clean <- demo_raw |> 
+demographics_clean <- demo_raw |> 
   #Selecting variables of interest
   select(SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, WTINT2YR, INDFMPIR) |> 
   #Renaming variables and setting values for gender (Male = 1, Female = 0)
@@ -20,4 +20,4 @@ demo_clean <- demo_raw |>
          Ratio_income_poverty = INDFMPIR 
          )
 
-View(demo_clean)
+View(demographics_clean)

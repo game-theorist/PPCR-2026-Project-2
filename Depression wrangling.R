@@ -9,7 +9,7 @@ library(skimr)
 
 depression_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DPQ_L.xpt")
 
-#Defining "refused", "dont know" and "0"
+#Defining "refused" and "dont know"
 
 depression_refused_dunno <- c(7, 9)
 
@@ -25,6 +25,8 @@ depression_clean <- depression_raw |>
   ) |> 
   #Categorizing depression yes/no (score >= 10)
   mutate(Depression = if_else(PHQ9_Score >= 10, 1, 2))
+
+view(depression_clean)
 
 #Plots
 
