@@ -1,15 +1,17 @@
 #Demographics
 
+library(tidyverse)
+
 #Loading raw data
 
 demo_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DEMO_L.xpt")
 
-demo_selected <- demo_raw |> 
-  select(SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, WTINT2YR, INDFMPIR)
+#Cleaning the data
 
-#Renaming | Male = 1, Female = 0
-
-demo_names <- demo_selected |>
+demo_clean <- demo_raw |> 
+  #Selecting variables of interest
+  select(SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, WTINT2YR, INDFMPIR) |> 
+  #Renaming variables and setting values for gender (Male = 1, Female = 0)
   group_by(SEQN) |> 
   summarize(Gender = if_else(RIAGENDR == 1, 1, 0),
          Age = RIDAGEYR,
@@ -17,7 +19,5 @@ demo_names <- demo_selected |>
          Interview_Weight = WTINT2YR,
          Ratio_income_poverty = INDFMPIR 
          )
-         
-
 
 View(demo_clean)

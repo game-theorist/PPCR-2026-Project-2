@@ -1,12 +1,17 @@
 #Joining everything
 
+library(tidyverse)
+library(haven)
+library(psych)
+library(skimr)
+
 dep_pa_raw <- full_join(pa_moderate_vigorous_met, dep_cat_score, by = "SEQN")
 
 dep_pa_demo_raw <- full_join(dep_pa_raw, demo_names, by = "SEQN")
 
 dep_pa_demo_sitting_raw <- full_join(dep_pa_demo_raw, sitting_clean, by = "SEQN")
 
-dep_pa_demo_sitting_diabetes_raw <- full_join(dep_pa_demo_sitting_raw, diabetes_cat, by = "SEQN")
+dep_pa_demo_sitting_diabetes_raw <- full_join(dep_pa_demo_sitting_raw, diabetes_clean, by = "SEQN")
 
 #Filtering adults
 
