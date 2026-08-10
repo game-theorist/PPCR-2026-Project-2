@@ -23,7 +23,7 @@ nhanes_project_2_raw <- demographics_raw |>
   full_join(unemployment_raw, by = "SEQN") |> 
   zap_labels()
 
-         
+
 #Defining "refused" and "dont know"
 
 depression_refused_dunno <- c(7, 9)
@@ -52,7 +52,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
     OCD150, OCQ383,
     #Diabetes variables
     DIQ010, DIQ160, DIQ050, DIQ070
-    ) |>
+  ) |>
   
   #Demographics data cleaning
   
@@ -61,19 +61,16 @@ nhanes_project_2 <- nhanes_project_2_raw |>
          Age = RIDAGEYR,
          Race = RIDRETH3,
          Ratio_income_poverty = INDFMPIR
-         ) |>
+  ) |>
   mutate(Gender = if_else(Gender == 1, 1, 0)) |> 
- 
+  
   #Depression data cleaning
   
   #Calculating PHQ-9 Score
   mutate(across(c(DPQ010:DPQ090), ~ replace_values(.x, depression_refused_dunno ~ NA))) |> 
-  filter(!if_any(c(DPQ010:DPQ090), is.na)) |> 
-  mutate(PHQ9_Score = rowSums(across(DPQ010:DPQ090), na.rm = TRUE)) |> 
+  mutate(PHQ9_Score = rowSums(across(DPQ010:DPQ090), na.rm = FALSE)) |> 
   #Categorizing depression yes/no (score >= 10)
   mutate(Depression = if_else(PHQ9_Score >= 10, 1, 2)) |> 
-  #Removing unnecessary depression variables
-  select(!c(DPQ010:DPQ090)) |> 
   
   #Physical activity data cleaning
   
@@ -82,10 +79,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
          PAD810U = as.factor(PAD810U)) |> 
   #Setting "refused", "dont know" or "0" as missing
   mutate(across(!c(SEQN, PAD790U, PAD810U, PAD680), ~ replace_values(.x, pa_refused_or_dunno ~ NA))) |> 
-  #Removing observations with all values of physical activity and sitting time variables as missing
-  filter(!if_all(c(PAD790Q, PAD800, PAD810Q, PAD820), is.na)) |> 
-  #Removing observations with missing sitting time
-  filter(!is.na(PAD680)) |> 
+
   #Renaming sitting time
   rename("sitting_time" = "PAD680") |>
   #Transforming observation data to minutes_per_week of moderate activity
@@ -108,7 +102,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Calculating weekly MET-minutes
   mutate(vigorous_met = vigorous_weekly_minutes * 7) |>
   #Summing up MET (vigorous + moderate)
-  mutate(weekly_MET = rowSums(pick(moderate_met, vigorous_met), na.rm = TRUE)) |>
+  mutate(weekly_MET = rowSums(pick(moderate_met, vigorous_met), na.rm = FALSE)) |>
   #Summing moderate (* 1) and vigorous (* 2) for WHO guideline equivalency
   mutate(who_guideline_total = 
            coalesce(moderate_weekly_minutes, 0) + 
@@ -116,8 +110,6 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   ) |> 
   #WHO guideline (150 moderate minutes or 75 vigorous minutes or equivalent; yes or no
   mutate(who_guideline = if_else(who_guideline_total >= 150, 1, 0)) |> 
-  #Dropping unnecessary variables
-  select(!starts_with("PAD")) |> 
   
   #Smoking data cleaning
   
@@ -133,30 +125,38 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Setting OCD150 and OCQ383 "refused" and "dont know" to NA
   mutate(across(OCD150, ~ replace_values(.x, OCD150_refused_or_dunno ~ NA))) |>
   mutate(across(OCQ383, ~ replace_values(.x, OCQ383_refused_or_dunno ~ NA))) |> 
-  #Removing observations with unemployment data
-  filter(!is.na(OCD150)) |> 
-  #Removing subjects with missing values in OCQ383 IF OCD150 = 4
-  filter(!when_all(OCD150 %in% c(4) & is.na(OCQ383))) |> 
   #Setting employed subjects as 0 and unemployed as 1
   mutate(unemployed = case_when(OCQ383 %in% c(5, 6, 7) ~ 1,
-                                   OCD150 == 3 ~ 1,
-                                   .default = 0)
-         ) |>
-  #Removing unnecessary variables
-  select(!c(OCD150, OCQ383)) |> 
+                                OCD150 == 3 ~ 1,
+                                .default = 0)
+  ) |>
   
   #Diabetes data cleaning
   
   #Setting "refused" and "dont know" to NA
   mutate(across(c(DIQ010, DIQ160, DIQ050, DIQ070), ~ replace_values(.x, diabetes_refused_or_dunno ~ NA))) |> 
-  #Removing rows with all values as missing
-  filter(!if_all(c(DIQ010, DIQ160, DIQ050, DIQ070), is.na)) |> 
   #Changing "No" answer from "2" to "0"
   mutate(across(c(DIQ010, DIQ160, DIQ050, DIQ070), ~ replace_values(.x, 2 ~ 0))) |> 
   #Categorizing diabetics (yes = 1, no = 0) based on if they answered YES to ANY of the questions
   mutate(Diabetic = if_else(
     if_any(everything(), ~ . == 1), 1, 0, missing = 0)) |>
+
+  #Setting main sample
+
+  mutate(main_sample = if_else(
+    if_any(DPQ010:DPQ090, is.na) |
+      if_all(c(PAD790Q, PAD800, PAD810Q, PAD820), is.na) |
+      if_all(c(DIQ010, DIQ160, DIQ050, DIQ070), is.na) |
+      is.na(sitting_time) |
+      is.na(OCD150) |
+      (OCD150 %in% c(4) & is.na(OCQ383)),
+    0, 1)) |> 
+
   #Removing unnecessary variables
-  select(!c(DIQ010, DIQ160, DIQ050, DIQ070))
+
+  select(!c(DPQ010:DPQ090)) |>
+  select(!starts_with("PAD")) |> 
+  select(!c(DIQ010, DIQ160, DIQ050, DIQ070)) |>
+  select(!c(OCD150, OCQ383))
 
 view(nhanes_project_2)
