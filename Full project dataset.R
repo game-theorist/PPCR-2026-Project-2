@@ -1,5 +1,4 @@
 
-
 library(tidyverse)
 library(haven)
 library(psych)
@@ -42,7 +41,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Selecting variables of interest
   select(
     #Demographics variables
-    SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, WTINT2YR, INDFMPIR,
+    SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, INDFMPIR, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA,
     #Depression variables
     c(DPQ010:DPQ100), 
     #Physical activity and sitting variables
@@ -58,13 +57,14 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Demographics data cleaning
   
   #Renaming variables and setting values for gender (Male = 1, Female = 0)
-  mutate(Gender = if_else(RIAGENDR == 1, 1, 0)) |> 
-  rename(Age = RIDAGEYR,
+  rename(Gender = RIAGENDR,
+         Age = RIDAGEYR,
          Race = RIDRETH3,
          Interview_Weight = WTINT2YR,
          Ratio_income_poverty = INDFMPIR
-         ) |> 
-  
+         ) |>
+  mutate(Gender = if_else(Gender == 1, 1, 0)) |> 
+ 
   #Depression data cleaning
   
   #Calculating PHQ-9 Score
@@ -96,6 +96,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
     PAD790U == "Y" ~ PAD800 / 52,
     PAD790U == "W" ~ PAD800)
   ) |> 
+  mutate(moderate_weekly_minutes = round(moderate_weekly_minutes, digits = 0)) |> 
   #calculating weekly MET-minutes
   mutate(moderate_met = moderate_weekly_minutes * 5) |> 
   #Transforming observation data to minutes_per_week of vigorous activity
@@ -104,6 +105,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
     PAD810U == "M" ~ PAD820 / 4,
     PAD810U == "Y" ~ PAD820 / 52,
     PAD810U == "W" ~ PAD820)) |> 
+  mutate(vigorous_weekly_minutes = round(vigorous_weekly_minutes, digits = 0)) |>
   #Calculating weekly MET-minutes
   mutate(vigorous_met = vigorous_weekly_minutes * 7) |>
   #Summing up MET (vigorous + moderate)
