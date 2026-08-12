@@ -11,7 +11,9 @@ depression_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DPQ_L.xpt")
 diabetes_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DIQ_L.xpt")
 pa_sitting_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/PAQ_L.xpt")
 smoking_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/SMQ_L.xpt")
+alcohol_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/ALQ_L.xpt")
 unemployment_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/OCQ_L.xpt")
+bloodpressure_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/BPXO_L.xpt")
 
 #Joining the raw data into a single dataframe
 
@@ -19,8 +21,10 @@ nhanes_project_2_raw <- demographics_raw |>
   full_join(pa_sitting_raw, by = "SEQN") |> 
   full_join(depression_raw, by = "SEQN") |> 
   full_join(diabetes_raw, by = "SEQN") |> 
-  full_join(smoking_raw, by = "SEQN") |> 
+  full_join(smoking_raw, by = "SEQN") |>
+  full_join(alcohol_raw, by = "SEQN") |> 
   full_join(unemployment_raw, by = "SEQN") |> 
+  full_join(bloodpressure_raw, by = "SEQN") |> 
   zap_labels()
 
 
@@ -29,6 +33,9 @@ nhanes_project_2_raw <- demographics_raw |>
 depression_refused_dunno <- c(7, 9)
 pa_refused_or_dunno <- c(7777, 9999)
 smoking_refused_or_dunno <- c(7, 9)
+alcohol_small_refused_or_dunno <- c(7, 9)
+alcohol_medium_refused_or_dunno <- c(77, 99)
+alcohol_large_refused_or_dunno <- c(777, 999)
 diabetes_refused_or_dunno <- c(7, 9)
 OCD150_refused_or_dunno <- c(7, 9)
 OCQ383_refused_or_dunno <- c(77, 99)
@@ -47,11 +54,15 @@ nhanes_project_2 <- nhanes_project_2_raw |>
     #Physical activity and sitting variables
     c(PAD790Q:PAD680),
     #Smoking variables
-    SMQ040,
+    SMQ020, SMQ040,
+    #Alcohol use variables
+    ALQ111, ALQ121, ALQ130,
     #Unemployment variables
     OCD150, OCQ383,
     #Diabetes variables
-    DIQ010, DIQ160, DIQ050, DIQ070
+    DIQ010, DIQ160, DIQ050, DIQ070,
+    #Blood pressure variable
+    BPXOSY1, BPXOSY2, BPXOSY3, BPXODI1, BPXODI2, BPXODI3
   ) |>
   
   #Demographics data cleaning
@@ -114,11 +125,28 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Smoking data cleaning
   
   #Setting "refused" and "dont know" to NA
-  mutate(across(SMQ040, ~ replace_values(.x, smoking_refused_or_dunno ~ NA))) |> 
-  #Replacing 3 for "No" with 0
-  mutate(smoker = if_else(SMQ040 == 3, 0, 1)) |> 
-  #Removing unnecessary variables
-  select(!SMQ040) |> 
+  mutate(across(c(SMQ020, SMQ040), ~ replace_values(.x, smoking_refused_or_dunno ~ NA))) |> 
+  #
+  mutate(smoker = if_else(SMQ020 == 1 &
+                            SMQ040 %in% c(1, 2),
+                          1, 0)
+  ) |> 
+  
+  #Alcohol use data cleaning
+  
+  #Setting "refused" and "dont know" to NA
+  mutate(across(ALQ111, ~ replace_values(.x, alcohol_small_refused_or_dunno ~ NA))) |> 
+  mutate(across(ALQ121, ~ replace_values(.x, alcohol_medium_refused_or_dunno ~ NA))) |> 
+  mutate(across(ALQ130, ~ replace_values(.x, alcohol_large_refused_or_dunno ~ NA))) |> 
+  #Setting employed subjects as 0 and unemployed as 1
+  mutate(alcohol_use = case_when(ALQ111 == 2 ~ 0,
+                                 ALQ111 == 2 & ALQ121 == 0 ~ 0,
+                                 ALQ111 == 1 & Gender == 1 & ALQ130 >= 2 ~ 2,
+                                 ALQ111 == 1 & Gender == 0 & ALQ130 >= 1 ~ 2,
+                                 .default = 1
+                                 )
+  ) |> 
+  
   
   #Unemployment data cleaning
   
@@ -140,14 +168,28 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Categorizing diabetics (yes = 1, no = 0) based on if they answered YES to ANY of the questions
   mutate(Diabetic = if_else(
     if_any(everything(), ~ . == 1), 1, 0, missing = 0)) |>
+  
+  #Blood pressure data cleaning
+  
+  #Average systolic and diastolic
+  mutate(avg_systolic_bp = rowMeans(pick(BPXOSY1, BPXOSY2, BPXOSY3)),
+         avg_diastolic_bp = rowMeans(pick(BPXODI1, BPXODI2, BPXODI3))
+         ) |> 
+  mutate(hypertension = case_when(avg_systolic_bp >= 130 ~ 1,
+                                  avg_diastolic_bp >= 80 ~ 1,
+                                  .default = 0)
+  ) |> 
+
 
   #Setting main sample
 
   mutate(main_sample = if_else(
     if_any(DPQ010:DPQ090, is.na) |
       if_all(c(PAD790Q, PAD800, PAD810Q, PAD820), is.na) |
-      if_all(c(DIQ010, DIQ160, DIQ050, DIQ070), is.na) |
       is.na(sitting_time) |
+      if_all(c(SMQ020, SMQ040), is.na) |
+      if_all(c(ALQ111, ALQ121, ALQ130), is.na) |
+      if_all(c(DIQ010, DIQ160, DIQ050, DIQ070), is.na) |
       is.na(OCD150) |
       (OCD150 %in% c(4) & is.na(OCQ383)),
     0, 1)) |> 
@@ -156,6 +198,8 @@ nhanes_project_2 <- nhanes_project_2_raw |>
 
   select(!c(DPQ010:DPQ090)) |>
   select(!starts_with("PAD")) |> 
+  select(!SMQ020, SMQ040) |> 
+  select(!starts_with("ALQ")) |> 
   select(!c(DIQ010, DIQ160, DIQ050, DIQ070)) |>
   select(!c(OCD150, OCQ383))
 
