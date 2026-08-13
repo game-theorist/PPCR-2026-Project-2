@@ -14,6 +14,8 @@ smoking_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/SMQ_L.xpt")
 alcohol_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/ALQ_L.xpt")
 unemployment_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/OCQ_L.xpt")
 bloodpressure_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/BPXO_L.xpt")
+bpcholesterol_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/BPQ_L.xpt")
+comorbidities_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/MCQ_L.xpt")
 
 #Joining the raw data into a single dataframe
 
@@ -25,6 +27,8 @@ nhanes_project_2_raw <- demographics_raw |>
   full_join(alcohol_raw, by = "SEQN") |> 
   full_join(unemployment_raw, by = "SEQN") |> 
   full_join(bloodpressure_raw, by = "SEQN") |> 
+  full_join(bpcholesterol_raw, by = "SEQN") |> 
+  full_join(comorbidities_raw, by = "SEQN") |> 
   zap_labels()
 
 
@@ -37,6 +41,8 @@ alcohol_small_refused_or_dunno <- c(7, 9)
 alcohol_medium_refused_or_dunno <- c(77, 99)
 alcohol_large_refused_or_dunno <- c(777, 999)
 diabetes_refused_or_dunno <- c(7, 9)
+bpcholesterol_refused_or_dunno <- c(7, 9)
+comorbidities_refused_or_dunno <- c(7, 77, 9, 99)
 OCD150_refused_or_dunno <- c(7, 9)
 OCQ383_refused_or_dunno <- c(77, 99)
 
@@ -61,8 +67,12 @@ nhanes_project_2 <- nhanes_project_2_raw |>
     OCD150, OCQ383,
     #Diabetes variables
     DIQ010, DIQ160, DIQ050, DIQ070,
-    #Blood pressure variable
-    BPXOSY1, BPXOSY2, BPXOSY3, BPXODI1, BPXODI2, BPXODI3
+    #Blood pressure variables
+    BPXOSY1, BPXOSY2, BPXOSY3, BPXODI1, BPXODI2, BPXODI3, BPQ020, BPQ030, BPQ150,
+    #Cholesterol variables
+    BPQ080, BPQ101D,
+    #Comorbidities variables
+    MCQ010, MCQ035, MCQ040, MCQ050, MCQ160A
   ) |>
   
   #Demographics data cleaning
@@ -171,14 +181,37 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   
   #Blood pressure data cleaning
   
+  #Setting "refused" and "dont know" to NA
+  mutate(across(BPQ150, ~ replace_values(.x, bpcholesterol_refused_or_dunno ~ NA))) |> 
   #Average systolic and diastolic
-  mutate(avg_systolic_bp = rowMeans(pick(BPXOSY1, BPXOSY2, BPXOSY3)),
-         avg_diastolic_bp = rowMeans(pick(BPXODI1, BPXODI2, BPXODI3))
+  mutate(avg_systolic_bp = round(rowMeans(pick(BPXOSY1, BPXOSY2, BPXOSY3))),
+         avg_diastolic_bp = round(rowMeans(pick(BPXODI1, BPXODI2, BPXODI3)))
          ) |> 
+  #Defining hypertension
   mutate(hypertension = case_when(avg_systolic_bp >= 130 ~ 1,
                                   avg_diastolic_bp >= 80 ~ 1,
+                                  BPQ030 == 1 ~ 1,
+                                  BPQ150 == 1 ~ 1,
                                   .default = 0)
   ) |> 
+  
+  #Cholesterol data cleaning
+  
+  #Setting "refused" and "dont know" to NA
+  mutate(across(c(BPQ080, BPQ101D), ~ replace_values(.x, bpcholesterol_refused_or_dunno ~ NA))) |>
+  #Defining dyslipidemia
+  mutate(dyslipidemia = if_else(BPQ080 == 1 |
+                                  BPQ101D == 1,
+                                1, 0)) |> 
+  
+  #Comorbidities data cleaning
+  
+  #Setting "refused" and "dont know" to NA
+  mutate(across(c(MCQ010, MCQ035, MCQ040, MCQ050), ~ replace_values(.x, comorbidities_refused_or_dunno ~ NA))) |> 
+  #Defining comorbidities
+  mutate(asthma = if_else(MCQ010 == 1 & MCQ035 == 1, 1, 0)) |>
+  mutate(arthritis = if_else(MCQ160A == 1, 1, 0)) |> 
+
 
 
   #Setting main sample
@@ -190,6 +223,8 @@ nhanes_project_2 <- nhanes_project_2_raw |>
       if_all(c(SMQ020, SMQ040), is.na) |
       if_all(c(ALQ111, ALQ121, ALQ130), is.na) |
       if_all(c(DIQ010, DIQ160, DIQ050, DIQ070), is.na) |
+      if_all(c(avg_systolic_bp, avg_diastolic_bp, BPQ030, BPQ150), is.na) |
+      if_all(c(BPQ080, BPQ101D), is.na) |
       is.na(OCD150) |
       (OCD150 %in% c(4) & is.na(OCQ383)),
     0, 1)) |> 
@@ -201,6 +236,9 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   select(!SMQ020, SMQ040) |> 
   select(!starts_with("ALQ")) |> 
   select(!c(DIQ010, DIQ160, DIQ050, DIQ070)) |>
+  select(!c(BPXOSY1, BPXOSY2, BPXOSY3, BPXODI1, BPXODI2, BPXODI3, 
+            avg_systolic_bp, avg_diastolic_bp, BPQ020, BPQ030, BPQ150)) |> 
+  select(!c(BPQ080, BPQ101D)) |> 
   select(!c(OCD150, OCQ383))
 
 view(nhanes_project_2)
