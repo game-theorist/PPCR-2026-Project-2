@@ -287,61 +287,62 @@ view(nhanes_project_2)
 
 ### Depression
 
-#### PHQ-9 Score
-
 ```{r}
 #| title: Tables
+
+library(tidyverse)
+library(gt)
+
+#depression tables
 
 #phq 9 score
 
 nhanes_project_2 |> 
-  summarize(row_label = "PHQ-9 Score",
-            missing = sum(is.na(PHQ9_Score)),
+  summarize(missing = sum(is.na(PHQ9_Score)),
             proportion_missing = round(mean((is.na(PHQ9_Score))), digits = 2),
+            available_data = sum(!is.na(PHQ9_Score)),
             mean = round(mean(PHQ9_Score, na.rm = TRUE), digits = 2),
             sd = round(sd(PHQ9_Score, na.rm = TRUE), digits = 2),
             median = median(PHQ9_Score, na.rm = TRUE),
-            iqr = IQR(PHQ9_Score, na.rm = TRUE)
+            iqr = IQR(PHQ9_Score, na.rm = TRUE),
+            depression = sum(depression, na.rm = TRUE)
             )|>
-  gt(
-    rowname_col = "row_label"
+  gt() |> 
+  tab_header(
+    title = md("PHQ-9 Score")
   ) |> 
   cols_label(
-    missing = md("Missing<br>Values"),
-    proportion_missing = md("Proportion <br>Missing <br>Values"),
+    missing = md("Missing<br>Data"),
+    proportion_missing = md("Proportion <br>Missing <br>Data"),
+    available_data = md("Available <br>Data"),
     mean = md("Mean"),
     sd = md("Standard <br>Deviation"),
     median = md("Median"),
-    iqr = md("Inter- <br>Quartile <br>Range")
-  )
-
+    iqr = md("Inter- <br>Quartile <br>Range"),
+    depression = md("Depression")
+  ) |> 
+  tab_footnote(
+    footnote = "Defined as PHQ-9 Score >= 10",
+    locations = cells_column_labels(
+      columns = depression
+    )
+  ) 
 ```
 
 ```{r}
-#| title: Building the plots
+#| title: Depression plots
+#| layout-ncol: 3
+#| fig-subcap: 
+#|   - "**Histogram - Total PHQ-9 score**"
+#|   - "**Density plot - Total PHQ-9 score**"
+#|   - "**Bar plot - Depression**"
 
-#Plots
+library(tidyverse)
+library(patchwork)
 
-#depression
+#depression plots
 
-#PHQ-9 Score
-
-phq9_density <- nhanes_project_2 |> 
-  ggplot(aes(x = PHQ9_Score)) +
-  geom_density(fill = "orange", color = "orange") +
-  scale_x_continuous(limits = c(0, NA), expand = c(0.01, 0.01)) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
-  xlab(NULL) +
-  ylab(NULL) +
-  theme_minimal() +
-  theme(
-    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
-    axis.title.y = element_text(size = 15, face = "bold"),
-    axis.text.x = element_text(size = 12, face = "bold"),
-    axis.text.y = element_text(size = 12, face = "bold")
-  )
-
-phq9_histogram <- nhanes_project_2 |> 
+nhanes_project_2 |> 
   ggplot(aes(x = PHQ9_Score)) +
   geom_histogram(binwidth = 1, boundary = 0, fill = "orange") +
   scale_x_continuous(limits = c(0, NA), expand = c(0.01, 0.01)) +
@@ -356,53 +357,25 @@ phq9_histogram <- nhanes_project_2 |>
     axis.text.y = element_text(size = 12, face = "bold")
   )
 
-```
-
-```{r}
-#| title: Showing the plots
-#| layout-ncol: 2
-#| fig-subcap: 
-#|   - "**Histogram of total PHQ-9 score**"
-#|   - "**Density plot of total PHQ-9 score**"
-
-phq9_histogram
-phq9_density
-
-```
-
-#### Depression categorized (PHQ-9 Score >= 10)
-
-```{r}
-#| title: Tables
-
-library(tidyverse)
-library(gt)
-
-#depression categorized
 
 nhanes_project_2 |> 
-  summarize(row_label = "Depression",
-            missing = sum(is.na(depression)),
-            proportion_missing = round(mean((is.na(depression))), digits = 2),
-            total = sum(depression, na.rm = TRUE),
-            proportion = round(mean(depression, na.rm = TRUE), digits = 2)
-            ) |>
-  gt(
-    rowname_col = "row_label"
-    ) |> 
-  cols_label(
-    missing = md("Missing<br>Values"),
-    proportion_missing = md("Proportion <br>Missing <br>Values"),
-    total = md("Total Depressed"),
-    proportion = md("Proportion Depressed")
+  ggplot(aes(x = PHQ9_Score)) +
+  geom_density(fill = "orange", color = "orange") +
+  scale_x_continuous(limits = c(0, NA), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
   )
 
-```
+# categorized
 
-```{r}
-#| title: Building the plots
-
-cat_depression <- nhanes_project_2 |> 
+nhanes_project_2 |> 
   drop_na(depression) |> 
   ggplot(aes(x = as.factor(depression))) +
   geom_bar(fill = "orange") +
@@ -421,30 +394,100 @@ cat_depression <- nhanes_project_2 |>
 
 ```
 
-```{r}
-#| title: Showing the plots
-#| layout-ncol: 1
-#| fig-subcap: 
-#|   - "**Bar plot of Depression**"
+### Sitting Time
 
-cat_depression
+```{r}
+#| title: Sitting time tables
+
+library(tidyverse)
+library(gt)
+
+#sitting time tables
+
+nhanes_project_2 |> 
+  summarize(missing = sum(is.na(sitting_time)),
+            proportion_missing = round(mean((is.na(sitting_time))), digits = 2),
+            available_data = sum(!is.na(sitting_time)),
+            mean = round(mean(sitting_time, na.rm = TRUE), digits = 2),
+            sd = round(sd(sitting_time, na.rm = TRUE), digits = 2),
+            median = median(sitting_time, na.rm = TRUE),
+            iqr = IQR(sitting_time, na.rm = TRUE)
+  )|>
+  gt() |> 
+  tab_header(
+    title = md("Sitting time")
+  ) |> 
+  cols_label(
+    missing = md("Missing<br>Data"),
+    proportion_missing = md("Proportion <br>Missing <br>Data"),
+    available_data = md("Available <br>Data"),
+    mean = md("Mean"),
+    sd = md("Standard <br>Deviation"),
+    median = md("Median"),
+    iqr = md("Inter- <br>Quartile <br>Range")
+  )
+
+```
+
+```{r}
+#| title: Sitting time plots
+#| layout-ncol: 2
+#| fig-subcap:
+#|   - "**Histogram - Minutes of Sitting Time per Day**"
+#|   - "**Density Plot - Minutes of Sitting Time per Day**"
+
+library(tidyverse)
+library(patchwork)
+
+#sitting time plots
+
+nhanes_project_2 |> 
+  ggplot(aes(x = sitting_time)) +
+  geom_histogram(binwidth = 120, boundary = 0, fill = "lightgreen") +
+  scale_x_continuous(limits = c(0, NA), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+
+nhanes_project_2 |> 
+  ggplot(aes(x = sitting_time)) +
+  geom_density(fill = "lightgreen", color = "lightgreen") +
+  scale_x_continuous(limits = c(0, NA), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
 
 ```
 
 ### Physical Activity
 
 ```{r}
-#| title: Tables
+#| title: Moderate and Vigorous activity tables
 
 library(tidyverse)
 library(gt)
 
-#PA tables
+#moderate and vigorous
 
 nhanes_project_2 |> 
   summarize(across(c(moderate_weekly_minutes, vigorous_weekly_minutes),
                    list(missing = ~ sum(is.na(.x)),
                         proportion_missing = ~ round(mean(is.na(.x)), digits = 2),
+                        available_data = ~ sum(!is.na(.x)),
                         mean = ~ round(mean(.x, na.rm = TRUE), digits = 2),
                         sd = ~ round(sd(.x, na.rm = TRUE), digits = 2),
                         median = ~ round(median(.x, na.rm = TRUE), digits = 2),
@@ -452,10 +495,11 @@ nhanes_project_2 |>
   ) |> 
   gt() |> 
   tab_header(
-    title = md("Minutes of Activity")
+    title = md("Minutes of Activity per Week")
   ) |> 
-  cols_label(ends_with("missing") ~ md("Missing<br>Values"),
-             ends_with("proportion_missing") ~ md("Proportion <br>Missing <br>Values"),
+  cols_label(ends_with("missing") ~ md("Missing<br>Data"),
+             ends_with("proportion_missing") ~ md("Proportion <br>Missing <br>Data"),
+             ends_with("available_data") ~md("Available <br>Data"),
              ends_with("mean") ~ md("Mean"),
              ends_with("sd") ~ md("Standard <br>Deviation"),
              ends_with("median") ~ md("Median"),
@@ -468,25 +512,333 @@ nhanes_project_2 |>
               columns = starts_with("vigorous")
   )
 
-#WHO guideline
+```
+
+```{r}
+#| title: Moderate and Vigorous activity Plots
+#| layout-ncol: 2
+#| fig-subcap: 
+#|   - "**Histogram - Weekly minutes of moderate physical activity**"
+#|   - "**Density Plot - Weekly minutes of moderate physical activity**"
+#|   - "**Histogram - Weekly minutes of vigorous physical activity**"
+#|   - "**Density Plot - Weekly minutes of vigorous physical activity**"
+
+#moderate weekly minutes
 
 nhanes_project_2 |> 
-  summarize(across(who_guideline_total,
+  ggplot(aes(x = moderate_weekly_minutes)) +
+  geom_histogram(binwidth = 50, boundary = 0, fill = "lightblue") +
+  scale_x_continuous(limits = c(0, 4000), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+
+nhanes_project_2 |> 
+  ggplot(aes(x = moderate_weekly_minutes)) +
+  geom_density(fill = "lightblue", color = "lightblue") +
+  scale_x_continuous(limits = c(0, 4000), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+#vigorous weekly minutes
+
+nhanes_project_2 |> 
+  ggplot(aes(x = vigorous_weekly_minutes)) +
+  geom_histogram(binwidth = 50, boundary = 0, fill = "lightblue") +
+  scale_x_continuous(limits = c(0, 4000), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+
+nhanes_project_2 |> 
+  ggplot(aes(x = vigorous_weekly_minutes)) +
+  geom_density(fill = "lightblue", color = "lightblue") +
+  scale_x_continuous(limits = c(0, 4000), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+
+```
+
+```{r}
+#| title: WHO Guideline Tables
+
+#WHO guideline total
+
+nhanes_project_2 |> 
+  summarize(who_missing = sum(if_all(c(moderate_weekly_minutes, vigorous_weekly_minutes), is.na)),
+            who_proportion_missing = round(mean((if_all(c(moderate_weekly_minutes, vigorous_weekly_minutes), is.na))), digits = 2),
+            who_available_data = sum(!if_all(c(moderate_weekly_minutes, vigorous_weekly_minutes), is.na)),
+            across(who_guideline_total,
                    list(mean = ~ round(mean(.x, na.rm = TRUE), digits = 2),
                         sd = ~ round(sd(.x, na.rm = TRUE), digits = 2),
                         median = ~ round(median(.x, na.rm = TRUE), digits = 2),
-                        iqr = ~ IQR(.x, na.rm = TRUE)))
+                        iqr = ~ IQR(.x, na.rm = TRUE))),
+            who_guideline_met = sum(who_guideline, na.rm = TRUE),
+            who_guideline_met_proportion = round(mean(who_guideline, na.rm = TRUE), digits = 2)
+            
   ) |> 
   gt() |> 
   tab_header(
-    title = md("Minutes of Activity")
+    title = md("Minutes of Activity per Week")
   ) |> 
-  cols_label(ends_with("mean") ~ md("Mean"),
+  cols_label(ends_with("missing") ~ md("Missing<br>Data"),
+             ends_with("proportion_missing") ~ md("Proportion <br>Missing <br>Data"),
+             ends_with("available_data") ~md("Available <br>Data"),
+             ends_with("mean") ~ md("Mean"),
              ends_with("sd") ~ md("Standard <br>Deviation"),
              ends_with("median") ~ md("Median"),
-             ends_with("iqr") ~ md("Inter- <br>Quartile <br>Range")
+             ends_with("iqr") ~ md("Inter- <br>Quartile <br>Range"),
+             who_guideline_met ~ md("Guideline <br>Met"),
+             who_guideline_met_proportion ~ md("Proportion <br>Guideline <br>Met")
   ) |>  
   tab_spanner(label = md("**WHO <br>Guideline <br>Equivalent**"),
-              columns = starts_with("who"))
+              columns = starts_with("who")
+  ) |> 
+  tab_footnote(
+    footnote = "Total equivalent equals minutes per week of moderate activity + vigorous activity x 2 ",
+    locations = cells_column_spanners()
+  ) |> 
+  tab_footnote(
+    footnote = "Participants with total equivalent >= 150 minutes",
+    locations = cells_column_labels(
+      columns = who_guideline_met
+    )
+  )
+
+
+```
+
+```{r}
+#| title: WHO Guideline Plots
+#| layout-ncol: 2
+#| fig-subcap: 
+#|   - "**Histogram - Guideline Equivalent Minutes**"
+#|   - "**Density Plot - Guideline Equivalent Minutes**"
+
+#WHO guideline total
+
+nhanes_project_2 |> 
+  ggplot(aes(x = who_guideline_total)) +
+  geom_histogram(binwidth = 50, boundary = 0, fill = "lightblue") +
+  scale_x_continuous(limits = c(0, 2000), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+
+nhanes_project_2 |> 
+  ggplot(aes(x = who_guideline_total)) +
+  geom_density(fill = "lightblue", color = "lightblue") +
+  scale_x_continuous(limits = c(0, 2000), expand = c(0.01, 0.01)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 15, face = "bold", margin = margin(t = 17)),
+    axis.title.y = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold")
+  )
+
+```
+
+### Covariates
+
+#### Demographics
+
+```{r}
+
+#| title: Age, Gender tables
+
+library(tidyverse)
+library(gt)
+
+#Demmographics tables
+
+#Age
+
+nhanes_project_2 |> 
+  summarize(missing = sum(is.na(Age)),
+            proportion_missing = round(mean((is.na(Age))), digits = 2),
+            available_data = sum(!is.na(Age)),
+            median = median(Age, na.rm = TRUE),
+            iqr = IQR(Age, na.rm = TRUE)
+  )|>
+  gt() |> 
+  tab_header(
+    title = md("Age")
+  ) |> 
+  cols_label(
+    missing = md("Missing<br>Data"),
+    proportion_missing = md("Proportion <br>Missing <br>Data"),
+    available_data = md("Available <br>Data"),
+    median = md("Median"),
+    iqr = md("Inter- <br>Quartile <br>Range")
+    ) 
+
+#Gender
+
+nhanes_project_2 |> 
+  summarize(missing = sum(is.na(Gender)),
+            proportion_missing = round(mean((is.na(Gender))), digits = 2),
+            available_data = sum(!is.na(Gender)),
+            male = sum(Gender == 1, na.rm = TRUE),
+            female = sum(Gender == 0, na.rm = TRUE),
+            male_prop = round(mean(Gender == 1, na.rm = TRUE), digits = 3),
+            female_prop = round(mean(Gender == 0, na.rm = TRUE), digits = 3)
+
+  ) |> 
+  gt() |> 
+  tab_header(
+    title = md("Gender")
+  ) |> 
+  fmt_percent(
+    columns = c(male_prop, female_prop),
+    decimals = 2
+  ) |> 
+  cols_merge_n_pct(
+    col_n = male,
+    col_pct = male_prop
+  ) |> 
+  cols_merge_n_pct(
+    col_n = female,
+    col_pct = female_prop
+  ) |> 
+  cols_label(
+    missing = md("Missing<br>Data"),
+    proportion_missing = md("Proportion <br>Missing <br>Data"),
+    available_data = md("Available <br>Data"),
+    male = md("Male"),
+    female = md("Female")
+    )
+
+#Race and Ethnicity
+
+# 1 Mexican American	2	Other Hispanic 3	Non-Hispanic White 4	Non-Hispanic Black 6	Non-Hispanic Asian 7	Other Race - Including Multi-Racial
+
+
+nhanes_project_2 |> 
+  summarize(missing = sum(is.na(Race)),
+            proportion_missing = round(mean((is.na(Race))), digits = 2),
+            available_data = sum(!is.na(Race)),
+            mexican_american = sum(Race == 1, na.rm = TRUE),
+            mexican_american_prop = round(mean(Race == 1, na.rm = TRUE), digits = 3),
+            other_hispanic = sum(Race == 2, na.rm = TRUE),
+            other_hispanic_prop = round(mean(Race == 2, na.rm = TRUE), digits = 3),
+            non_hispanic_white = sum(Race == 3, na.rm = TRUE),
+            non_hispanic_white_prop = round(mean(Race == 3, na.rm = TRUE), digits = 3),
+            non_hispanic_black = sum(Race == 4, na.rm = TRUE),
+            non_hispanic_black_prop = round(mean(Race == 4, na.rm = TRUE), digits = 3),
+            non_hispanic_asian = sum(Race == 6, na.rm = TRUE),
+            non_hispanic_asian_prop = round(mean(Race == 6, na.rm = TRUE), digits = 3)
+            ) |> 
+  gt() |> 
+  tab_header(
+    title = md("Race and Ethnicity")
+  ) |> 
+  fmt_percent(
+    columns = c(mexican_american_prop, other_hispanic_prop, non_hispanic_white_prop, non_hispanic_black_prop, non_hispanic_asian_prop),
+    decimals = 1
+  ) |> 
+  cols_merge_n_pct(
+    col_n = mexican_american,
+    col_pct = mexican_american_prop
+  ) |> 
+  cols_merge_n_pct(
+    col_n = other_hispanic,
+    col_pct = other_hispanic_prop
+  ) |> 
+  cols_merge_n_pct(
+    col_n = non_hispanic_white,
+    col_pct = non_hispanic_white_prop
+  ) |> 
+  cols_merge_n_pct(
+    col_n = non_hispanic_black,
+    col_pct = non_hispanic_black_prop
+  ) |> 
+  cols_merge_n_pct(
+    col_n = non_hispanic_asian,
+    col_pct = non_hispanic_asian_prop
+  ) |>
+  cols_label(
+    missing = md("Missing<br>Data"),
+    proportion_missing = md("Proportion <br>Missing <br>Data"),
+    available_data = md("Available <br>Data"),
+    mexican_american = md("Mexican American"),
+    other_hispanic = md("Other Hispanic"),
+    non_hispanic_white = md("Non-Hispanic White"),
+    non_hispanic_black = md("Non-Hispanic Black"),
+    non_hispanic_asian = md("Non-Hispanic Asian")
+    )
+
+# Ratio income poverty
+
+nhanes_project_2 |> 
+  summarize(missing = sum(is.na(Ratio_income_poverty)),
+            proportion_missing = round(mean((is.na(Ratio_income_poverty))), digits = 2),
+            available_data = sum(!is.na(Ratio_income_poverty)),
+            mean = round(mean(Ratio_income_poverty, na.rm = TRUE), digits = 2),
+            sd = round(sd(Ratio_income_poverty, na.rm = TRUE), digits = 2),
+            median = median(Ratio_income_poverty, na.rm = TRUE),
+            iqr = IQR(Ratio_income_poverty, na.rm = TRUE)
+  )|>
+  gt() |> 
+  tab_header(
+    title = md("Ratio of family income to poverty")
+  ) |> 
+  cols_label(
+    missing = md("Missing<br>Data"),
+    proportion_missing = md("Proportion <br>Missing <br>Data"),
+    available_data = md("Available <br>Data"),
+    mean = md("Mean"),
+    sd = md("Standard <br>Deviation"),
+    median = md("Median"),
+    iqr = md("Inter- <br>Quartile <br>Range")
+    ) |> 
+  tab_footnote(
+    footnote = "Calculated by dividing total annual family (or individual) income by the poverty guidelines specific to the survey year",
+    locations = cells_title()
+    ) |> 
+  tab_footnote(
+    footnote = "Truncated by NHANES at 5.0",
+    locations = cells_title()
+    ) 
+
 
 ```

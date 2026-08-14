@@ -2,9 +2,9 @@ library(readxl)
 
 #Group 12 dataframe
 
-nhanes_group_12_adapted <- read_excel("G:/My Drive/PPCR/Project 2/Group12_Milestone4_Final_numeric.xlsx")
+nhanes_group_12_raw <- read_excel("G:/My Drive/PPCR/Project 2/Group12_Milestone4_Final_numeric.xlsx")
 
-View(nhanes_group_12_adapted)
+View(nhanes_group_12_raw)
 
 #Adapting my dataframe
 

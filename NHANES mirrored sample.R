@@ -54,7 +54,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Selecting variables of interest
   select(
     #Demographics variables
-    SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, INDFMPIR, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA,
+    SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, DMDEDUC2, DMDMARTZ, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA, INDFMPIR,
     #depression variables
     c(DPQ010:DPQ100), 
     #Physical activity and sitting variables
@@ -75,16 +75,6 @@ nhanes_project_2 <- nhanes_project_2_raw |>
     MCQ010, MCQ035, MCQ040, MCQ050, MCQ160A, MCQ160B, MCQ160C, MCQ160D, MCQ160E, MCQ160F, MCQ160M, MCQ170M, MCQ160P, MCQ160L, MCQ170L, MCQ220
   ) |>
   
-  #Demographics data cleaning
-  
-  #Renaming variables and setting values for gender (Male = 1, Female = 0)
-  rename(Gender = RIAGENDR,
-         Age = RIDAGEYR,
-         Race = RIDRETH3,
-         Ratio_income_poverty = INDFMPIR
-  ) |>
-  mutate(Gender = if_else(Gender == 1, 1, 0)) |> 
-  
   #Depression data cleaning
   
   #Calculating PHQ-9 Score
@@ -100,7 +90,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
          PAD810U = as.factor(PAD810U)) |> 
   #Setting "refused", "dont know" or "0" as missing
   mutate(across(c(PAD790Q, PAD800, PAD810Q, PAD820, PAD680), ~ replace_values(.x, pa_refused_or_dunno ~ NA))) |> 
-
+  
   #Renaming sitting time
   rename("sitting_time" = "PAD680") |>
   #Transforming observation data to minutes_per_week of moderate activity
@@ -154,7 +144,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
                                  ALQ111 == 2 & ALQ121 == 0 ~ 0,
                                  ALQ111 == 2 ~ 0,
                                  .default = 0
-                                 )
+  )
   ) |> 
   
   
@@ -186,7 +176,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Average systolic and diastolic
   mutate(avg_systolic_bp = round(rowMeans(pick(BPXOSY1, BPXOSY2, BPXOSY3))),
          avg_diastolic_bp = round(rowMeans(pick(BPXODI1, BPXODI2, BPXODI3)))
-         ) |> 
+  ) |> 
   #Defining hypertension
   mutate(hypertension = case_when(avg_systolic_bp >= 130 ~ 1,
                                   avg_diastolic_bp >= 80 ~ 1,
@@ -226,14 +216,14 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Defining total comorbidity burden (0, 1 or >=2 comorbidities)
   mutate(comorbidity_total = rowSums(
     pick(
-      diabetes, hypertension, dyslipidemia, asthma, arthritis, chf, chd, angina, heart_attack, stroke, thyroid, copd, liver_disease, cancer), na.rm = TRUE)
+      diabetes, hypertension, dyslipidemia, asthma, arthritis, chf, chd, angina, heart_attack, stroke, thyroid, copd, liver_disease, cancer), na.rm =TRUE)
   ) |> 
   mutate(comorbidity_burden = if_else(comorbidity_total >= 2, 2, comorbidity_total)
   ) |> 
-
-
+  
+  
   #Setting main sample
-
+  
   mutate(main_sample = if_else(
     if_any(DPQ010:DPQ090, is.na) |
       if_all(c(PAD790Q, PAD800, PAD810Q, PAD820), is.na) |
@@ -245,9 +235,9 @@ nhanes_project_2 <- nhanes_project_2_raw |>
       is.na(OCD150) |
       (OCD150 %in% c(4) & is.na(OCQ383)),
     0, 1)) |> 
-
+  
   #Removing unnecessary variables
-
+  
   select(!c(DPQ010:DPQ090)) |>
   select(!starts_with("PAD")) |> 
   select(!c(SMQ020, SMQ040)) |> 
