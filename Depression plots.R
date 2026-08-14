@@ -7,22 +7,6 @@ library(patchwork)
 
 #PHQ-9 Score
 
-PHQ9_summary <- nhanes_project_2 |> 
-  summarize(missing = sum(is.na(PHQ9_Score)),
-            proportion_missing = mean((is.na(PHQ9_Score))),
-            mean = mean(PHQ9_Score, na.rm = TRUE),
-            sd = sd(PHQ9_Score, na.rm = TRUE),
-            median = median(PHQ9_Score, na.rm = TRUE),
-            iqr = IQR(PHQ9_Score, na.rm = TRUE)
-            )
-
-depression_summary <- nhanes_project_2 |> 
-  summarize(missing = sum(is.na(depression)),
-            proportion_missing = mean((is.na(depression))),
-            total = sum(depression, na.rm = TRUE),
-            proportion = mean(depression, na.rm = TRUE)
-            )
-
 phq9_density <- nhanes_project_2 |> 
   ggplot(aes(x = PHQ9_Score)) +
   geom_density(fill = "orange", color = "orange") +
