@@ -3,6 +3,7 @@ library(tidyverse)
 library(haven)
 library(psych)
 library(skimr)
+library(GGally)
 
 #Loading raw data
 
@@ -77,13 +78,24 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   
   #Demographics data cleaning
   
-  #Renaming variables and setting values for gender (Male = 1, Female = 0)
+  #Renaming variables
   rename(Gender = RIAGENDR,
          Age = RIDAGEYR,
          Race = RIDRETH3,
          Ratio_income_poverty = INDFMPIR
   ) |>
+  #Setting values for gender (Male = 1, Female = 0)
   mutate(Gender = if_else(Gender == 1, 1, 0)) |> 
+  #Setting values for Race 
+  #(Non-Hispanic White = 0, Mexican American = 1, Other Hispanic  = 2, Non-Hispanic Black = 3,
+  #Non-Hispanic Asian = 4, Other Race - Including Multi-Racial = 5)
+  mutate(Race = case_when(Race == 1 ~ 1,
+                          Race == 2 ~ 2,
+                          Race == 3 ~ 0,
+                          Race == 4 ~ 3,
+                          Race == 6 ~ 4,
+                          Race == 7 ~ 5)
+  ) |> 
   
   #Depression data cleaning
   
@@ -147,7 +159,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   mutate(across(ALQ111, ~ replace_values(.x, alcohol_small_refused_or_dunno ~ NA))) |> 
   mutate(across(ALQ121, ~ replace_values(.x, alcohol_medium_refused_or_dunno ~ NA))) |> 
   mutate(across(ALQ130, ~ replace_values(.x, alcohol_large_refused_or_dunno ~ NA))) |> 
-  #Setting employed subjects as 0 and unemployed as 1
+  #Setting heavy drinker = 2, drinker = 1, non-drinker = 0
   mutate(alcohol_use = case_when(ALQ111 == 1 & Gender == 1 & ALQ130 >= 2 ~ 2,
                                  ALQ111 == 1 & Gender == 1 & ALQ130 == 1 ~ 1,
                                  ALQ111 == 1 & Gender == 0 & ALQ130 >= 1 ~ 2,
