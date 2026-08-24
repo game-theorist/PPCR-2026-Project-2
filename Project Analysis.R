@@ -8,7 +8,7 @@ nhanes_project_2_tests <- nhanes_project_2 |>
   select(Gender, Age, Race, Ratio_income_poverty, sitting_time, 
          PHQ9_Score, depression, who_guideline_total, who_guideline, smoker, alcohol_use, unemployed, comorbidity_burden)
 
-#unadjusted GLM for depression ~ sitting time
+#unadjusted GL33M for depression ~ sitting time
 
 nhanes_project_2_glm_unadjusted <- glm(depression ~ sitting_time, data = nhanes_project_2_tests, family = binomial)
 
