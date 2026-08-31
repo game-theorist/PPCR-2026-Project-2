@@ -1,27 +1,64 @@
 #project analysis
 
 library(broom)
+library(psych)
+library(car)
+library(describedata)
 
 #selecting variables
 nhanes_project_2_tests <- nhanes_project_2 |> 
   mutate(sitting_time = sitting_time / 60) |> 
-  select(Gender, Age, Race, Ratio_income_poverty, sitting_time, 
-         PHQ9_Score, depression, who_guideline_total, who_guideline, smoker, alcohol_use, unemployed, comorbidity_burden)
+  select(main_sample, Gender, Age, Race, Ratio_income_poverty, sitting_time, 
+         PHQ9_Score, depression, who_guideline_total, who_guideline, smoker, alcohol_use, unemployed, comorbidity_burden) |> 
+  filter(main_sample == 1)
 
-#unadjusted GL33M for depression ~ sitting time
+confounder_candidate <- c("Gender", "Age", "as.factor(Race)", "as.factor(Ratio_income_poverty)", "smoker", "as.factor(alcohol_use)", "unemployed", "as.factor(comorbidity_burden)")
 
-nhanes_project_2_glm_unadjusted <- glm(depression ~ sitting_time, data = nhanes_project_2_tests, family = binomial)
+nhanes_project_2_lm_unadjusted <- tidy(lm(PHQ9_Score ~ sitting_time, data = nhanes_project_2_tests))
 
-#adjusted GLM
-
-nhanes_project_2_glm_adjusted <- glm(depression ~ sitting_time + Gender + as.factor(Race) + smoker + as.factor(alcohol_use) + unemployed + as.factor(comorbidity_burden), 
-    data = nhanes_project_2_tests, family = binomial)
-
-tidy_nhanes_project_2_glm_unadjusted <- tidy(nhanes_project_2_glm_unadjusted, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.95)
-
-tidy_nhanes_project_2_glm_adjusted <- tidy(nhanes_project_2_glm_adjusted, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.95)
+# Loop through each variable to fit a model
+untidy_models <- lapply(confounder_candidate, function(confounder) {
+  lm_formula <- as.formula(paste("PHQ9_Score ~ sitting_time +", confounder))
+  lm(lm_formula, data = nhanes_project_2_tests)
+})
 
 
-tidy_nhanes_project_2_glm_unadjusted
+models <- lapply(confounder_candidate, function(confounder) {
+  lm_formula <- as.formula(paste("PHQ9_Score ~ sitting_time +", confounder))
+  tidy(lm(lm_formula, data = nhanes_project_2_tests))
+})
 
-tidy_nhanes_project_2_glm_adjusted
+# Assign names to the list for easy access
+names(models) <- confounder_candidate
+
+extracted_values <- (map_dbl(models, ~ .x[[2, "estimate"]]))
+
+odds_ratio_change <- tibble(
+  candidate = names(models),
+  "odds_ratio" = round(extracted_values, digits = 6)
+) |> 
+  mutate("%_change" = abs(100 * ( 1 - (odds_ratio / nhanes_project_2_lm_unadjusted$estimate[2]))),
+         n = sapply(untidy_models, nobs)
+  )
+
+#assignment final model
+
+untidy_final_assignment_16_model <- lm(PHQ9_Score ~ sitting_time + Gender, data = nhanes_project_2_tests)
+
+final_assignment_16_model <- tidy(lm(PHQ9_Score ~ sitting_time + Gender, data = nhanes_project_2_tests))
+
+#colinearity
+
+correlation <- corr.test(nhanes_project_2_tests[, c("PHQ9_Score", "sitting_time", "Gender")], use = "pairwise")
+
+pwcorr <- pwcorr(nhanes_project_2_tests, vars = c("PHQ9_Score", "sitting_time", "Gender"))
+
+vif <- vif(untidy_final_assignment_16_model)
+
+models
+
+odds_ratio_change
+
+pwcorr
+
+vif
