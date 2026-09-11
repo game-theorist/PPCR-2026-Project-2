@@ -6,8 +6,12 @@ library(car)
 library(describedata)
 
 #selecting variables
-nhanes_project_2_tests <- nhanes_project_2 |> 
-  mutate(sitting_time = sitting_time / 60) |> 
+nhanes_project_2_tests <- nhanes_project_2 |>  
+  mutate(
+    sitting_time = sitting_time / 60,
+    Race = as.factor(Race),
+    who_guideline = as.factor(who_guideline)
+  ) |> 
   select(main_sample, Gender, Age, Race, Ratio_income_poverty, sitting_time, 
          PHQ9_Score, depression, who_guideline_total, who_guideline, smoker, alcohol_use, unemployed, comorbidity_burden) |> 
   filter(main_sample == 1)
@@ -43,15 +47,21 @@ odds_ratio_change <- tibble(
 
 #assignment final model
 
-untidy_final_assignment_16_model <- lm(PHQ9_Score ~ sitting_time + Gender, data = nhanes_project_2_tests)
+untidy_final_assignment_16_model <- lm(PHQ9_Score ~ sitting_time + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests)
 
-final_assignment_16_model <- tidy(lm(PHQ9_Score ~ sitting_time + Gender, data = nhanes_project_2_tests))
+final_assignment_16_model <- tidy(lm(PHQ9_Score ~ sitting_time + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests), conf.int = TRUE, conf.level = 0.95)
+
+#Effect modification
+
+untidy_final_assignment_18_model <- lm(PHQ9_Score ~ sitting_time * who_guideline + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests)
+
+final_assignment_18_model <- tidy(lm(PHQ9_Score ~ sitting_time * who_guideline + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests), conf.int = TRUE, conf.level = 0.95)
 
 #colinearity
 
-correlation <- corr.test(nhanes_project_2_tests[, c("PHQ9_Score", "sitting_time", "Gender")], use = "pairwise")
+correlation <- corr.test(nhanes_project_2_tests[, c("PHQ9_Score", "sitting_time", "Gender", "Age", "Race", "Ratio_income_poverty")], use = "pairwise")
 
-pwcorr <- pwcorr(nhanes_project_2_tests, vars = c("PHQ9_Score", "sitting_time", "Gender"))
+pwcorr <- pwcorr(nhanes_project_2_tests, vars = c("PHQ9_Score", "sitting_time", "Gender", "Age", "Race", "Ratio_income_poverty"))
 
 vif <- vif(untidy_final_assignment_16_model)
 
