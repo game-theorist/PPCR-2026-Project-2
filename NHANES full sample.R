@@ -3,20 +3,19 @@ library(tidyverse)
 library(haven)
 library(psych)
 library(skimr)
-library(GGally)
 
 #Loading raw data
 
-demographics_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DEMO_L.xpt")
-depression_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DPQ_L.xpt")
-diabetes_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/DIQ_L.xpt")
-pa_sitting_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/PAQ_L.xpt")
-smoking_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/SMQ_L.xpt")
-alcohol_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/ALQ_L.xpt")
-unemployment_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/OCQ_L.xpt")
-bloodpressure_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/BPXO_L.xpt")
-bpcholesterol_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/BPQ_L.xpt")
-comorbidities_raw <- read_xpt("G:/My Drive/PPCR/Project 2/NHANES Data/MCQ_L.xpt")
+demographics_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/DEMO_L.xpt")
+depression_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/DPQ_L.xpt")
+diabetes_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/DIQ_L.xpt")
+pa_sitting_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/PAQ_L.xpt")
+smoking_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/SMQ_L.xpt")
+alcohol_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/ALQ_L.xpt")
+unemployment_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/OCQ_L.xpt")
+bloodpressure_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/BPXO_L.xpt")
+bpcholesterol_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/BPQ_L.xpt")
+comorbidities_raw <- read_xpt("G:/My Drive/PPCR/Project 2 - NHANES/NHANES Data/MCQ_L.xpt")
 
 #Joining the raw data into a single dataframe
 
@@ -46,6 +45,7 @@ bpcholesterol_refused_or_dunno <- c(7, 9)
 comorbidities_refused_or_dunno <- c(7, 77, 9, 99)
 OCD150_refused_or_dunno <- c(7, 9)
 OCQ383_refused_or_dunno <- c(77, 99)
+marital_refused_or_dunno <- c(77, 99)
 
 
 #Cleaning the data
@@ -55,7 +55,7 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Selecting variables of interest
   select(
     #Demographics variables
-    SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, INDFMPIR, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA,
+    SEQN, RIAGENDR, RIDAGEYR, RIDRETH3, INDFMPIR, DMDMARTZ, WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA, 
     #depression variables
     c(DPQ010:DPQ100), 
     #Physical activity and sitting variables
@@ -95,6 +95,9 @@ nhanes_project_2 <- nhanes_project_2_raw |>
                           Race == 4 ~ 3,
                           Race == 6 ~ 4,
                           Race == 7 ~ 5)
+  ) |> 
+  #Marital status
+  mutate(across(DMDMARTZ, ~ replace_values(.x, marital_refused_or_dunno ~ NA))
   ) |> 
   
   #Depression data cleaning
@@ -148,9 +151,10 @@ nhanes_project_2 <- nhanes_project_2_raw |>
   #Setting "refused" and "dont know" to NA
   mutate(across(c(SMQ020, SMQ040), ~ replace_values(.x, smoking_refused_or_dunno ~ NA))) |> 
   #
-  mutate(smoker = if_else(SMQ020 == 1 &
-                            SMQ040 %in% c(1, 2),
-                          1, 0)
+  mutate(smoker = case_when(SMQ020 == 1 &
+                            SMQ040 %in% c(1, 2) ~ 2,
+                            SMQ020 == 1 & (is.na(SMQ040) | SMQ040 == 3) ~ 1,
+                            SMQ020 == 2 ~ 0)
   ) |> 
   
   #Alcohol use data cleaning
@@ -255,7 +259,9 @@ nhanes_project_2 <- nhanes_project_2_raw |>
       if_all(c(ALQ111, ALQ121, ALQ130), is.na) |
       if_all(c(diabetes, hypertension, dyslipidemia, asthma, arthritis, chf, chd, angina, heart_attack, stroke, thyroid, copd, liver_disease, cancer), is.na) |
       is.na(OCD150) |
-      (OCD150 %in% c(4) & is.na(OCQ383)),
+      (OCD150 %in% c(4) & is.na(OCQ383)) |
+      is.na(Ratio_income_poverty) |
+      is.na(DMDMARTZ),
     0, 1)) |> 
 
   #Removing unnecessary variables

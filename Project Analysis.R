@@ -1,19 +1,24 @@
 #project analysis
 
+library(tidyverse)
 library(broom)
 library(psych)
 library(car)
 library(describedata)
+library(estimatr)
+library(survey)
 
 #selecting variables
 nhanes_project_2_tests <- nhanes_project_2 |>  
   mutate(
+    PHQ9_Score = log1p(PHQ9_Score),
     sitting_time = sitting_time / 60,
     Race = as.factor(Race),
     who_guideline = as.factor(who_guideline)
   ) |> 
   select(main_sample, Gender, Age, Race, Ratio_income_poverty, sitting_time, 
-         PHQ9_Score, depression, who_guideline_total, who_guideline, smoker, alcohol_use, unemployed, comorbidity_burden) |> 
+         PHQ9_Score, depression, who_guideline_total, who_guideline, smoker, alcohol_use, unemployed, comorbidity_burden,
+         WTINT2YR, WTMEC2YR, SDMVPSU, SDMVSTRA) |> 
   filter(main_sample == 1)
 
 confounder_candidate <- c("Gender", "Age", "as.factor(Race)", "as.factor(Ratio_income_poverty)", "smoker", "as.factor(alcohol_use)", "unemployed", "as.factor(comorbidity_burden)")
@@ -45,12 +50,6 @@ odds_ratio_change <- tibble(
          n = sapply(untidy_models, nobs)
   )
 
-#assignment final model
-
-untidy_final_assignment_16_model <- lm(PHQ9_Score ~ sitting_time + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests)
-
-final_assignment_16_model <- tidy(lm(PHQ9_Score ~ sitting_time + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests), conf.int = TRUE, conf.level = 0.95)
-
 #Effect modification
 
 untidy_final_assignment_18_model <- lm(PHQ9_Score ~ sitting_time * who_guideline + Gender + Age + Race + Ratio_income_poverty, data = nhanes_project_2_tests)
@@ -59,11 +58,20 @@ final_assignment_18_model <- tidy(lm(PHQ9_Score ~ sitting_time * who_guideline +
 
 #colinearity
 
-correlation <- corr.test(nhanes_project_2_tests[, c("PHQ9_Score", "sitting_time", "Gender", "Age", "Race", "Ratio_income_poverty")], use = "pairwise")
+#correlation <- corr.test(nhanes_project_2_tests[, c("PHQ9_Score", "sitting_time", "Gender", "Age", "Race", "Ratio_income_poverty")], use = "pairwise")
 
-pwcorr <- pwcorr(nhanes_project_2_tests, vars = c("PHQ9_Score", "sitting_time", "Gender", "Age", "Race", "Ratio_income_poverty"))
+pwcorr_data <- nhanes_project_2_tests |> 
+  mutate(
+    who_guideline = as.numeric(who_guideline),
+    Race = as.numeric(Race)
+  )
+pwcorr <- pwcorr(pwcorr_data, vars = c("PHQ9_Score", "sitting_time", "who_guideline", "Gender", "Age", "Race", "Ratio_income_poverty"))
 
-vif <- vif(untidy_final_assignment_16_model)
+vif <- vif(untidy_final_assignment_18_model)
+
+augmented_model <- augment(untidy_final_assignment_18_model)
+
+summarized_model <- summary(untidy_final_assignment_18_model)
 
 models
 
@@ -72,3 +80,7 @@ odds_ratio_change
 pwcorr
 
 vif
+
+final_assignment_18_model
+
+summarized_model
